@@ -1,0 +1,14 @@
+# Operating System files
+Thumbs.db
+.DS_Store
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.bak
+
+# Node / Dependencies (for upcoming Phase 2)
+node_modules/
+dist/
+.env
