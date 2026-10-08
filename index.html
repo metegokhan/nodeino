@@ -43,9 +43,24 @@
       pointer-events: auto !important;
     }
 
-    /* Vurgulama (Highlight) Stilleri */
+    /* Otomatik Odak (Neon Çevre Parlaması) - Diğer kartlar ASLA kararmayacak */
+    .node-focus-primary {
+      box-shadow: 0 0 35px rgba(45, 212, 191, 0.8), 0 0 15px rgba(255, 255, 255, 0.95), inset 0 0 15px rgba(45, 212, 191, 0.25) !important;
+      border-color: #2dd4bf !important;
+      transform: scale(1.025);
+      z-index: 55 !important;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .node-focus-chain {
+      box-shadow: 0 0 25px rgba(129, 140, 248, 0.65), 0 0 10px rgba(255, 255, 255, 0.7), inset 0 0 10px rgba(129, 140, 248, 0.18) !important;
+      border-color: #818cf8 !important;
+      z-index: 50 !important;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
     .node-highlighted {
-      box-shadow: 0 0 32px rgba(45, 212, 191, 0.7), 0 0 12px rgba(255, 255, 255, 0.95) !important;
+      box-shadow: 0 0 36px rgba(45, 212, 191, 0.85), 0 0 16px rgba(255, 255, 255, 0.95) !important;
       border-color: #2dd4bf !important;
       transform: scale(1.03);
       z-index: 60 !important;
@@ -53,28 +68,27 @@
     }
 
     .node-connected-neighbor {
-      box-shadow: 0 0 24px rgba(129, 140, 248, 0.55), 0 0 8px rgba(255, 255, 255, 0.6) !important;
+      box-shadow: 0 0 24px rgba(129, 140, 248, 0.65), 0 0 8px rgba(255, 255, 255, 0.7) !important;
       border-color: #818cf8 !important;
       transform: scale(1.015);
-      z-index: 55 !important;
+      z-index: 52 !important;
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
+    /* Diğer kartlar kararmasın kuralı */
     .node-dimmed {
-      opacity: 0.16 !important;
-      filter: grayscale(0.8) blur(0.6px);
-      transition: all 0.25s ease;
-      pointer-events: auto;
+      opacity: 1 !important;
+      filter: none !important;
     }
 
     .wire-dimmed {
-      opacity: 0.08 !important;
+      opacity: 0.35 !important;
       transition: all 0.25s ease;
     }
 
     .wire-selected-glow {
       stroke-width: 4 !important;
-      filter: drop-shadow(0 0 8px currentColor) drop-shadow(0 0 4px #ffffff) !important;
+      filter: drop-shadow(0 0 10px currentColor) drop-shadow(0 0 4px #ffffff) !important;
     }
 
     .code-line::before {
@@ -444,6 +458,8 @@
       {
         stepIndex: 0,
         activeNodeId: 'node-sensor',
+        activeChainNodes: ['node-loop-sequencer', 'node-sensor', 'node-memory-box'],
+        activeChainEdges: ['trig-1', 'write-raw', 'pin-d9'],
         activeTriggerEdge: 'trig-1',
         highlightLineId: 'code-l2',
         badge: 'Adım 1/4',
@@ -454,6 +470,8 @@
       {
         stepIndex: 1,
         activeNodeId: 'node-filter',
+        activeChainNodes: ['node-loop-sequencer', 'node-filter', 'node-memory-box'],
+        activeChainEdges: ['trig-2', 'read-raw-to-filter', 'write-clean'],
         activeTriggerEdge: 'trig-2',
         highlightLineId: 'code-l3',
         badge: 'Adım 2/4',
@@ -464,6 +482,8 @@
       {
         stepIndex: 2,
         activeNodeId: 'node-motor',
+        activeChainNodes: ['node-loop-sequencer', 'node-motor', 'node-memory-box', 'node-pin-registry'],
+        activeChainEdges: ['read-clean-to-branch', 'trig-3', 'pin-d5'],
         activeTriggerEdge: 'trig-3',
         highlightLineId: 'code-l4c',
         badge: 'Adım 3/4',
@@ -474,6 +494,8 @@
       {
         stepIndex: 3,
         activeNodeId: 'node-loop-sequencer',
+        activeChainNodes: ['node-loop-sequencer'],
+        activeChainEdges: [],
         activeTriggerEdge: null,
         highlightLineId: 'code-l5',
         badge: 'Adım 4/4',
@@ -542,28 +564,34 @@
         const card = document.createElement('div');
         card.id = node.id;
         
-        // Vurgulama & Sönümleme Sınıfları
+        // Otomatik Odak ve Vurgulama Mantığı (Hedef ve zincir kartlar parlar, diğerleri ASLA kararmayacak)
         let highlightClass = '';
+        const currentSim = simulationSteps[state.currentStep];
+        const isSimPrimary = (currentSim?.activeNodeId === node.id);
+        const isSimChain = (currentSim?.activeChainNodes?.includes(node.id));
+
         if (state.selectedNodeId) {
           if (state.selectedNodeId === node.id) {
             highlightClass = 'node-highlighted';
           } else {
-            // Seçili karta doğrudan bağlı mı?
             const isConnected = state.edges.some(e => 
               (e.fromNode === state.selectedNodeId && e.toNode === node.id) ||
               (e.toNode === state.selectedNodeId && e.fromNode === node.id)
             );
-            highlightClass = isConnected ? 'node-connected-neighbor' : 'node-dimmed';
+            highlightClass = isConnected ? 'node-connected-neighbor' : '';
           }
         } else if (state.selectedWireId) {
           const wire = state.edges.find(e => e.id === state.selectedWireId);
           if (wire && (wire.fromNode === node.id || wire.toNode === node.id)) {
             highlightClass = 'node-highlighted';
-          } else {
-            highlightClass = 'node-dimmed';
           }
-        } else if (simulationSteps[state.currentStep]?.activeNodeId === node.id) {
-          highlightClass = 'shadow-[0_0_24px_rgba(45,212,191,0.45)] border-teal-400';
+        } else {
+          // Canlı Simülasyonda Otomatik Odak (Hedef ve Zincir Kartların Çevresi Parlar)
+          if (isSimPrimary) {
+            highlightClass = 'node-focus-primary';
+          } else if (isSimChain) {
+            highlightClass = 'node-focus-chain';
+          }
         }
 
         if (node.type === 'sequencer') {
@@ -645,35 +673,41 @@
             </div>
 
             <div class="p-3.5 space-y-2.5">
-              <div class="p-2.5 rounded-lg border border-slate-700 bg-slate-900/80">
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <div id="mem-slot-raw" class="w-4 h-4 rounded-full border-2 border-teal-400 bg-teal-500/20 hover:scale-125 transition cursor-pointer" title="readDistance() Sonucu Yazma Portu (GİRİŞ)"></div>
-                    <span class="text-xs font-mono font-bold text-teal-300">raw</span>
-                    <span class="text-[10px] font-mono text-slate-400">(uint16_t)</span>
+              ${(() => {
+                const isRawActive = (state.currentStep === 0 || state.currentStep === 1);
+                const isCleanActive = (state.currentStep === 1 || state.currentStep === 2);
+                return `
+                  <div class="p-2.5 rounded-lg border transition-all duration-300 ${isRawActive ? 'border-teal-400 bg-teal-500/20 shadow-[0_0_18px_rgba(45,212,191,0.3)] ring-1 ring-teal-400' : 'border-slate-700 bg-slate-900/80'}">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-2">
+                        <div id="mem-slot-raw" class="w-4 h-4 rounded-full border-2 border-teal-400 bg-teal-500/20 hover:scale-125 transition cursor-pointer" title="readDistance() Sonucu Yazma Portu (GİRİŞ)"></div>
+                        <span class="text-xs font-mono font-bold text-teal-300">raw</span>
+                        <span class="text-[10px] font-mono text-slate-400">(uint16_t)</span>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-mono font-bold text-white bg-slate-800 px-2 py-0.5 rounded border border-slate-700">${memoryStore.raw.value}</span>
+                        <div id="mem-slot-raw-out" class="w-4 h-4 rounded-full border-2 border-purple-400 bg-purple-500/20 hover:scale-125 transition cursor-pointer" title="smoothFilter() İçin Değer Okuma Portu (ÇIKIŞ)"></div>
+                      </div>
+                    </div>
+                    <div class="mt-1 text-[10px] font-mono text-teal-400/80">${memoryStore.raw.statusText}</div>
                   </div>
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs font-mono font-bold text-white bg-slate-800 px-2 py-0.5 rounded border border-slate-700">${memoryStore.raw.value}</span>
-                    <div id="mem-slot-raw-out" class="w-4 h-4 rounded-full border-2 border-purple-400 bg-purple-500/20 hover:scale-125 transition cursor-pointer" title="smoothFilter() İçin Değer Okuma Portu (ÇIKIŞ)"></div>
-                  </div>
-                </div>
-                <div class="mt-1 text-[10px] font-mono text-teal-400/80">${memoryStore.raw.statusText}</div>
-              </div>
 
-              <div class="p-2.5 rounded-lg border border-slate-700 bg-slate-900/80">
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <div id="mem-slot-clean" class="w-4 h-4 rounded-full border-2 border-teal-400 bg-teal-500/20 hover:scale-125 transition cursor-pointer" title="smoothFilter() Sonucu Yazma Portu (GİRİŞ)"></div>
-                    <span class="text-xs font-mono font-bold text-purple-300">clean</span>
-                    <span class="text-[10px] font-mono text-slate-400">(uint16_t)</span>
+                  <div class="p-2.5 rounded-lg border transition-all duration-300 ${isCleanActive ? 'border-purple-400 bg-purple-500/20 shadow-[0_0_18px_rgba(192,132,252,0.3)] ring-1 ring-purple-400' : 'border-slate-700 bg-slate-900/80'}">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-2">
+                        <div id="mem-slot-clean" class="w-4 h-4 rounded-full border-2 border-teal-400 bg-teal-500/20 hover:scale-125 transition cursor-pointer" title="smoothFilter() Sonucu Yazma Portu (GİRİŞ)"></div>
+                        <span class="text-xs font-mono font-bold text-purple-300">clean</span>
+                        <span class="text-[10px] font-mono text-slate-400">(uint16_t)</span>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-mono font-bold text-white bg-slate-800 px-2 py-0.5 rounded border border-slate-700">${memoryStore.clean.value}</span>
+                        <div id="mem-slot-clean-out" class="w-4 h-4 rounded-full border-2 border-purple-400 bg-purple-500/20 hover:scale-125 transition cursor-pointer" title="Şart Kontrolü İçin Değer Okuma Portu (ÇIKIŞ)"></div>
+                      </div>
+                    </div>
+                    <div class="mt-1 text-[10px] font-mono text-purple-300/80">${memoryStore.clean.statusText}</div>
                   </div>
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs font-mono font-bold text-white bg-slate-800 px-2 py-0.5 rounded border border-slate-700">${memoryStore.clean.value}</span>
-                    <div id="mem-slot-clean-out" class="w-4 h-4 rounded-full border-2 border-purple-400 bg-purple-500/20 hover:scale-125 transition cursor-pointer" title="Şart Kontrolü İçin Değer Okuma Portu (ÇIKIŞ)"></div>
-                  </div>
-                </div>
-                <div class="mt-1 text-[10px] font-mono text-purple-300/80">${memoryStore.clean.statusText}</div>
-              </div>
+                `;
+              })()}
 
               <div class="p-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10">
                 <div class="flex items-center justify-between">
@@ -1149,10 +1183,11 @@
           routeResult = computeSimpleFallback(x1, y1, x2, y2, state.wireStyle);
         }
 
-        const pathData = routeResult.pathStr;
-        const isCurrentActiveTrigger = simulationSteps[state.currentStep]?.activeTriggerEdge === edge.id;
+        const currentSim = simulationSteps[state.currentStep];
+        const isCurrentActiveTrigger = currentSim?.activeTriggerEdge === edge.id;
+        const isCurrentChainEdge = currentSim?.activeChainEdges?.includes(edge.id);
 
-        // Vurgulama & Sönümleme Durumu
+        // Vurgulama & Odak Durumu (Diğer hatlar asla karartılmaz!)
         let isWireHighlighted = false;
         let isWireDimmed = false;
 
@@ -1165,8 +1200,11 @@
         } else if (state.selectedNodeId) {
           if (edge.fromNode === state.selectedNodeId || edge.toNode === state.selectedNodeId) {
             isWireHighlighted = true;
-          } else {
-            isWireDimmed = true;
+          }
+        } else {
+          // Canlı simülasyon akışında ilgili zincir hatları parlar, diğer hatlar normal kalır
+          if (isCurrentActiveTrigger || isCurrentChainEdge) {
+            isWireHighlighted = true;
           }
         }
 
@@ -1192,8 +1230,8 @@
         const glow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         glow.setAttribute('d', pathData);
         glow.setAttribute('stroke', edge.color || '#ffffff');
-        glow.setAttribute('stroke-width', isWireHighlighted ? '14' : (isCurrentActiveTrigger ? '8' : '4'));
-        glow.setAttribute('stroke-opacity', isWireHighlighted ? '0.55' : (isCurrentActiveTrigger ? '0.28' : '0.1'));
+        glow.setAttribute('stroke-width', isCurrentActiveTrigger ? '16' : (isCurrentChainEdge ? '12' : (isWireHighlighted ? '14' : '4')));
+        glow.setAttribute('stroke-opacity', isCurrentActiveTrigger ? '0.75' : (isCurrentChainEdge ? '0.5' : (isWireHighlighted ? '0.55' : '0.12')));
         glow.setAttribute('fill', 'none');
         wireGroup.appendChild(glow);
 
@@ -1201,7 +1239,7 @@
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('d', pathData);
         path.setAttribute('stroke', isCurrentActiveTrigger || isWireHighlighted ? '#ffffff' : (edge.color || '#ffffff'));
-        path.setAttribute('stroke-width', isWireHighlighted ? '3.5' : (isCurrentActiveTrigger ? '2.5' : '2'));
+        path.setAttribute('stroke-width', isCurrentActiveTrigger ? '3.5' : (isCurrentChainEdge ? '2.8' : (isWireHighlighted ? '3' : '2')));
         path.setAttribute('fill', 'none');
         path.setAttribute('marker-end', `url(#arrow-${edge.id === 'pin-d5' ? 'pin-motor' : (edge.kind === 'trigger' ? 'trigger' : (edge.kind === 'write' ? 'write-mem' : (edge.kind === 'read' ? 'read-mem' : 'pin')))})`);
         
