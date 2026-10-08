@@ -402,13 +402,13 @@
         id: 'trig-1', kind: 'trigger', 
         fromPort: 'port-seq-1', toPort: 'port-sensor-trigger', 
         fromNode: 'node-loop-sequencer', toNode: 'node-sensor',
-        label: 'İstem 1 ➔', color: '#ffffff', lane: 0 
+        label: 'raw = ... ➔', color: '#ffffff', lane: 0 
       },
       { 
         id: 'trig-2', kind: 'trigger', 
         fromPort: 'port-seq-2', toPort: 'port-filter-trigger', 
         fromNode: 'node-loop-sequencer', toNode: 'node-filter',
-        label: 'İstem 2 ➔', color: '#ffffff', lane: 1 
+        label: 'clean = ... ➔', color: '#ffffff', lane: 1 
       },
       { 
         id: 'trig-3', kind: 'trigger', 
@@ -615,13 +615,19 @@
 
             <div class="p-3 space-y-2.5 text-xs">
               <div class="flex items-center justify-between p-2 rounded-lg border transition ${state.currentStep === 0 ? 'bg-indigo-500/25 border-indigo-400 text-white font-semibold' : 'bg-slate-900/40 border-slate-800 text-slate-300'}">
-                <span class="font-mono">1. Ölçüm İste ➔ readDistance()</span>
-                <div id="port-seq-1" class="w-4 h-4 rounded bg-slate-100 text-black flex items-center justify-center font-black text-[10px] cursor-pointer shadow-md hover:scale-125 transition" title="1. Adım Tetikleyici Çıkışı">▶</div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-teal-300 font-mono font-bold text-[11px]">raw</span>
+                  <span class="font-mono text-[11px]">= readDistance()</span>
+                </div>
+                <div id="port-seq-1" class="w-4 h-4 rounded bg-slate-100 text-black flex items-center justify-center font-black text-[10px] cursor-pointer shadow-md hover:scale-125 transition" title="Değişken Ataması (Tetikleyici)">▶</div>
               </div>
 
               <div class="flex items-center justify-between p-2 rounded-lg border transition ${state.currentStep === 1 ? 'bg-indigo-500/25 border-indigo-400 text-white font-semibold' : 'bg-slate-900/40 border-slate-800 text-slate-300'}">
-                <span class="font-mono">2. Filtre İste ➔ smoothFilter()</span>
-                <div id="port-seq-2" class="w-4 h-4 rounded bg-slate-100 text-black flex items-center justify-center font-black text-[10px] cursor-pointer shadow-md hover:scale-125 transition" title="2. Adım Tetikleyici Çıkışı">▶</div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-purple-300 font-mono font-bold text-[11px]">clean</span>
+                  <span class="font-mono text-[11px]">= smoothFilter()</span>
+                </div>
+                <div id="port-seq-2" class="w-4 h-4 rounded bg-slate-100 text-black flex items-center justify-center font-black text-[10px] cursor-pointer shadow-md hover:scale-125 transition" title="Değişken Ataması (Tetikleyici)">▶</div>
               </div>
 
               <div class="p-2.5 rounded-lg border border-purple-500/40 bg-purple-950/20 space-y-2 ${state.currentStep === 2 ? 'ring-1 ring-purple-400' : ''}">
@@ -1182,6 +1188,8 @@
         } else {
           routeResult = computeSimpleFallback(x1, y1, x2, y2, state.wireStyle);
         }
+
+        const pathData = routeResult ? routeResult.pathStr : '';
 
         const currentSim = simulationSteps[state.currentStep];
         const isCurrentActiveTrigger = currentSim?.activeTriggerEdge === edge.id;
