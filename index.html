@@ -153,6 +153,12 @@
       <div class="h-5 w-px bg-[var(--border,#30363d)] mx-1"></div>
 
       <!-- Simülasyon Kontrolleri -->
+      <!-- Hız Kontrolü -->
+      <div id="speed-control" class="flex items-center gap-1.5 bg-black/40 border border-white/10 px-2 py-1 rounded-md text-xs">
+        <span class="text-slate-400 text-[11px]">Hız:</span>
+        <input type="range" id="slider-speed" min="1" max="100" value="45" class="w-16 accent-teal-400 cursor-pointer">
+      </div>
+
       <button id="btn-toggle-loop" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-teal-500/40 bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 transition shadow-sm">
         <span id="loop-dot" class="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
         <span id="loop-text">Döngü: ÇALIŞIYOR</span>
@@ -277,6 +283,66 @@
         <div class="text-slate-400 pl-2">uint16_t readDistance(uint8_t trig, uint8_t echo) { ... }</div>
         <div class="text-slate-400 pl-2">uint16_t smoothFilter(uint16_t rawDist, uint16_t prev) { ... }</div>
         <div class="text-slate-400 pl-2">void controlMotor(uint8_t speed, uint8_t speedPin) { ... }</div>
+      </div>
+
+      <!-- Tam Kaynak Kod (Editor) -->
+      <div class="h-[45%] flex flex-col border-t border-[var(--border,#30363d)] bg-[#0d1117] shrink-0">
+        <div class="h-8 px-3 border-b border-[var(--border,#30363d)] bg-black/40 flex items-center justify-between text-[11px] font-bold text-slate-300 shrink-0">
+          <div class="flex items-center gap-1.5"><span class="text-blue-400">&lt;/c++&gt;</span><span>Tam Kaynak Kod (Düzenlenebilir)</span></div>
+        </div>
+        <textarea class="flex-1 w-full p-3 bg-transparent text-slate-300 font-mono text-[10px] leading-relaxed resize-none focus:outline-none border-none outline-none" spellcheck="false">
+const int TRIG_PIN = 9;
+const int ECHO_PIN = 10;
+const int ENA_PIN = 5;
+const int IN1_PIN = 6;
+
+uint16_t raw;
+uint16_t clean;
+float temp_c = 24.5; // [Linter: Ölü Değişken!]
+
+void setup() {
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+  pinMode(ENA_PIN, OUTPUT);
+  pinMode(IN1_PIN, OUTPUT);
+}
+
+void loop() {
+  raw = readDistance(TRIG_PIN, ECHO_PIN);
+  clean = smoothFilter(raw, 25);
+  
+  if (clean < 20) {
+    stopMotors();
+  } else {
+    controlMotor(180, ENA_PIN);
+  }
+  delay(50);
+}
+
+uint16_t readDistance(uint8_t trig, uint8_t echo) {
+  digitalWrite(trig, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trig, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig, LOW);
+  long dur = pulseIn(echo, HIGH);
+  return dur * 0.034 / 2;
+}
+
+uint16_t smoothFilter(uint16_t rawDist, uint16_t prev) {
+  return (rawDist * 0.7) + (prev * 0.3);
+}
+
+void controlMotor(uint8_t speed, uint8_t speedPin) {
+  analogWrite(speedPin, speed);
+  digitalWrite(6, HIGH);
+}
+
+void stopMotors() {
+  analogWrite(ENA_PIN, 0);
+  digitalWrite(6, LOW);
+}
+</textarea>
       </div>
     </aside>
 
@@ -469,7 +535,15 @@
         badge: 'Adım 1/4',
         title: '1. Ölçüm İste: readDistance()',
         desc: "loop(), sensöre çıkış istemi gönderir. Dönen 38 cm değeri Değerler Kutusundaki [raw] değişkenine yazılır.",
-        memoryEffect: 'raw'
+        memoryEffect: 'raw',
+        sequence: [
+          { type: 'node', id: 'node-loop-sequencer' },
+          { type: 'edge', id: 'trig-1' },
+          { type: 'node', id: 'node-sensor' },
+          { type: 'edge', id: 'pin-d9' },
+          { type: 'edge', id: 'write-raw' },
+          { type: 'node', id: 'node-memory-box' }
+        ]
       },
       {
         stepIndex: 1,
@@ -481,7 +555,15 @@
         badge: 'Adım 2/4',
         title: '2. Filtre İste: smoothFilter()',
         desc: "loop() 2. adımı tetikler. smoothFilter, Değerler Kutusundan [raw] değerini okur ve sonucu [clean] değişkenine (35 cm) yazar.",
-        memoryEffect: 'clean'
+        memoryEffect: 'clean',
+        sequence: [
+          { type: 'node', id: 'node-loop-sequencer' },
+          { type: 'edge', id: 'trig-2' },
+          { type: 'node', id: 'node-filter' },
+          { type: 'edge', id: 'read-raw-to-filter' },
+          { type: 'edge', id: 'write-clean' },
+          { type: 'node', id: 'node-memory-box' }
+        ]
       },
       {
         stepIndex: 2,
@@ -493,7 +575,16 @@
         badge: 'Adım 3/4',
         title: '3. Karar & Motor Sürüşü: controlMotor(180)',
         desc: "Şart kontrolü: clean (35 cm) < 20 cm mi? HAYIR. 'Aksi Halde (İleri)' dalı seçilir ve controlMotor(180, ENA_PIN) tetiklenir.",
-        memoryEffect: null
+        memoryEffect: null,
+        sequence: [
+          { type: 'node', id: 'node-memory-box' },
+          { type: 'edge', id: 'read-clean-to-branch' },
+          { type: 'node', id: 'node-loop-sequencer' },
+          { type: 'edge', id: 'trig-3' },
+          { type: 'node', id: 'node-motor' },
+          { type: 'edge', id: 'pin-d5' },
+          { type: 'node', id: 'node-pin-registry' }
+        ]
       },
       {
         stepIndex: 3,
@@ -506,7 +597,10 @@
         title: '4. Kadans & Bekleme: delay(50ms)',
         desc: "Sıralayıcının altındaki '50ms Kadans Rozeti' aktive olur. İşlemci 50ms bekler ve döngü periyodu en başa (Adım 1'e) döner.",
         memoryEffect: null,
-        isCadenceActive: true
+        isCadenceActive: true,
+        sequence: [
+          { type: 'node', id: 'node-loop-sequencer' }
+        ]
       }
     ];
 
@@ -522,6 +616,9 @@
       dragOffset: { x: 0, y: 0 },
       isAutoLoop: true,
       currentStep: 0,
+      loopSpeed: 2400,
+      subStep: 1,
+      subStepTimer: null,
       loopIntervalTimer: null,
       wireStyle: 'pcb',
       cornerRadius: 10,
@@ -538,6 +635,7 @@
     const sliderCornerRadius = document.getElementById('slider-corner-radius');
     const radiusValText = document.getElementById('radius-val-text');
     const cornerRadiusControl = document.getElementById('corner-radius-control');
+    const sliderSpeed = document.getElementById('slider-speed');
     const btnToggleLoop = document.getElementById('btn-toggle-loop');
     const loopDot = document.getElementById('loop-dot');
     const loopText = document.getElementById('loop-text');
@@ -571,8 +669,18 @@
         // Otomatik Odak ve Vurgulama Mantığı (Hedef ve zincir kartlar parlar, diğerleri ASLA kararmayacak)
         let highlightClass = '';
         const currentSim = simulationSteps[state.currentStep];
-        const isSimPrimary = (currentSim?.activeNodeId === node.id);
-        const isSimChain = (currentSim?.activeChainNodes?.includes(node.id));
+        
+        let isSimPrimary = false;
+        let isSimChain = false;
+        
+        if (currentSim && currentSim.sequence) {
+          const revealedSequence = currentSim.sequence.slice(0, state.subStep);
+          isSimChain = revealedSequence.some(s => s.type === 'node' && s.id === node.id);
+          isSimPrimary = (currentSim.activeNodeId === node.id && isSimChain);
+        } else {
+          isSimPrimary = (currentSim?.activeNodeId === node.id);
+          isSimChain = (currentSim?.activeChainNodes?.includes(node.id));
+        }
 
         if (state.selectedNodeId) {
           if (state.selectedNodeId === node.id) {
@@ -1203,8 +1311,17 @@
         const pathData = routeResult ? routeResult.pathStr : '';
 
         const currentSim = simulationSteps[state.currentStep];
-        const isCurrentActiveTrigger = currentSim?.activeTriggerEdge === edge.id;
-        const isCurrentChainEdge = currentSim?.activeChainEdges?.includes(edge.id);
+        let isCurrentActiveTrigger = false;
+        let isCurrentChainEdge = false;
+        
+        if (currentSim && currentSim.sequence) {
+          const revealedSequence = currentSim.sequence.slice(0, state.subStep);
+          isCurrentChainEdge = revealedSequence.some(s => s.type === 'edge' && s.id === edge.id);
+          isCurrentActiveTrigger = (currentSim.activeTriggerEdge === edge.id && isCurrentChainEdge);
+        } else {
+          isCurrentActiveTrigger = currentSim?.activeTriggerEdge === edge.id;
+          isCurrentChainEdge = currentSim?.activeChainEdges?.includes(edge.id);
+        }
 
         // Vurgulama & Odak Durumu (Diğer hatlar asla karartılmaz!)
         let isWireHighlighted = false;
@@ -1430,21 +1547,52 @@
     function advanceStep() {
       if (state.draggingNodeId || state.isPanning) return;
       state.currentStep = (state.currentStep + 1) % simulationSteps.length;
+      
+      if (state.subStepTimer) clearInterval(state.subStepTimer);
+      state.subStep = 1;
       updateSimulatorUI();
+
+      const seq = simulationSteps[state.currentStep].sequence;
+      if (seq && seq.length > 1) {
+        const stepDuration = state.loopSpeed / (seq.length + 1.5);
+        state.subStepTimer = setInterval(() => {
+          if (state.subStep < seq.length) {
+            state.subStep++;
+            renderNodes();
+            renderWires();
+          } else {
+            clearInterval(state.subStepTimer);
+          }
+        }, stepDuration);
+      }
     }
 
     function startAutoLoop() {
-      if (state.loopIntervalTimer) clearInterval(state.loopIntervalTimer);
-      state.loopIntervalTimer = setInterval(() => {
+      if (state.loopIntervalTimer) clearTimeout(state.loopIntervalTimer);
+      const loop = () => {
         advanceStep();
-      }, 1900);
+        if (state.isAutoLoop) {
+          state.loopIntervalTimer = setTimeout(loop, state.loopSpeed);
+        }
+      };
+      state.loopIntervalTimer = setTimeout(loop, state.loopSpeed);
     }
 
     function stopAutoLoop() {
       if (state.loopIntervalTimer) {
-        clearInterval(state.loopIntervalTimer);
+        clearTimeout(state.loopIntervalTimer);
         state.loopIntervalTimer = null;
       }
+    }
+
+    if(sliderSpeed) {
+      sliderSpeed.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value, 10);
+        state.loopSpeed = 4000 - ((val - 1) / 99) * 3600; 
+        if (state.isAutoLoop) {
+          startAutoLoop();
+        }
+      });
     }
 
     btnToggleLoop.addEventListener('click', () => {
