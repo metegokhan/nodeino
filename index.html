@@ -167,6 +167,10 @@
         <span>&lt;/&gt;</span>
       </button>
 
+      <button id="btn-auto-arrange" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-blue-500/40 bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 transition shadow-sm" title="Kartları Düzenle">
+        <span>🪄</span><span>Dizilim</span>
+      </button>
+
       <button id="btn-reset-view" class="px-2.5 py-1.5 rounded-md text-xs font-medium border border-[var(--border,#30363d)] bg-[var(--card,#21262d)] hover:bg-[var(--border,#30363d)] text-[var(--foreground,#c9d1d9)] transition" title="Görünümü Sıfırla">
         ⛶
       </button>
@@ -1066,7 +1070,8 @@
       let mid = astarRoute(A, startDir, B, endDir, boxes, used);
       if (!mid) mid = [A, { x: A.x, y: B.y }, B];
 
-      const pts = [{ x: x1, y: y1 }, ...mid, { x: x2, y: y2 }];
+      const adjustedX2 = x2 + (sideB < 0 ? -14 : 14);
+      const pts = [{ x: x1, y: y1 }, ...mid, { x: adjustedX2, y: y2 }];
       const cleaned = cleanCollinearPoints(pts);
       markUsed(used, cleaned);
       return renderFilletedWithStraightStubs(cleaned, cornerRadius);
@@ -1149,13 +1154,19 @@
     }
 
     function computeSimpleFallback(x1, y1, x2, y2, style) {
-      if (style === 'linear') {
-        return { pathStr: `M ${x1} ${y1} L ${x2} ${y2}`, pts: [{x:x1,y:y1},{x:x2,y:y2}] };
+      const dist = Math.hypot(x2 - x1, y2 - y1);
+      let ax2 = x2, ay2 = y2;
+      if (dist > 14) {
+        ax2 = x2 - ((x2 - x1) / dist) * 14;
+        ay2 = y2 - ((y2 - y1) / dist) * 14;
       }
-      const dx = Math.max(40, Math.abs(x2 - x1) * 0.5);
+      if (style === 'linear') {
+        return { pathStr: `M ${x1} ${y1} L ${ax2} ${ay2}`, pts: [{x:x1,y:y1},{x:ax2,y:ay2}] };
+      }
+      const dx = Math.max(40, Math.abs(ax2 - x1) * 0.5);
       return { 
-        pathStr: `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`,
-        pts: [{x:x1,y:y1},{x:(x1+x2)/2,y:(y1+y2)/2},{x:x2,y:y2}]
+        pathStr: `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${ax2 - dx} ${ay2}, ${ax2} ${ay2}`,
+        pts: [{x:x1,y:y1},{x:(x1+ax2)/2,y:(y1+ay2)/2},{x:ax2,y:ay2}]
       };
     }
 
@@ -1291,8 +1302,13 @@
       const midX = (bestP1.x + bestP2.x) / 2;
       const midY = (bestP1.y + bestP2.y) / 2;
 
+      let angle = Math.atan2(bestP2.y - bestP1.y, bestP2.x - bestP1.x) * (180 / Math.PI);
+      if (angle > 90 || angle <= -90) {
+        angle += 180;
+      }
+
       const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      g.setAttribute('transform', `translate(${midX}, ${midY})`);
+      g.setAttribute('transform', `translate(${midX}, ${midY}) rotate(${angle})`);
       g.style.cursor = 'pointer';
       g.style.pointerEvents = 'all';
       g.addEventListener('click', (e) => {
@@ -1576,6 +1592,25 @@
     document.getElementById('btn-zoom-out').addEventListener('click', () => {
       state.zoom = Math.max(state.zoom / 1.15, 0.4);
       updateTransform();
+      renderWires();
+    });
+
+    document.getElementById('btn-auto-arrange').addEventListener('click', () => {
+      const layout = {
+        'node-loop-sequencer': { x: 60, y: 80 },
+        'node-sensor': { x: 60, y: 440 },
+        'node-filter': { x: 60, y: 700 },
+        'node-motor': { x: 60, y: 960 },
+        'node-memory-box': { x: 480, y: 80 },
+        'node-pin-registry': { x: 480, y: 440 }
+      };
+      state.nodes.forEach(n => {
+        if(layout[n.id]) {
+          n.x = layout[n.id].x;
+          n.y = layout[n.id].y;
+        }
+      });
+      applyNodePositions();
       renderWires();
     });
 
