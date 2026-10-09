@@ -494,25 +494,25 @@ void stopMotors() {
       },
       { 
         id: 'write-raw', kind: 'write', 
-        fromPort: 'port-sensor-ret', toPort: 'mem-val-raw', 
+        fromPort: 'port-sensor-ret', toPort: 'mem-in-raw', 
         fromNode: 'node-sensor', toNode: 'node-memory-box',
         label: 'raw: 38cm ➔', color: '#2dd4bf', lane: 3 
       },
       { 
         id: 'write-clean', kind: 'write', 
-        fromPort: 'port-filter-ret', toPort: 'mem-val-clean', 
+        fromPort: 'port-filter-ret', toPort: 'mem-in-clean', 
         fromNode: 'node-filter', toNode: 'node-memory-box',
         label: 'clean: 35cm ➔', color: '#2dd4bf', lane: 4 
       },
       { 
         id: 'read-raw-to-filter', kind: 'read', 
-        fromPort: 'mem-val-raw', toPort: 'port-filter-in-raw', 
+        fromPort: 'mem-out-raw', toPort: 'port-filter-in-raw', 
         fromNode: 'node-memory-box', toNode: 'node-filter',
         label: 'raw oku ➔', color: '#c084fc', lane: 5 
       },
       { 
         id: 'read-clean-to-branch', kind: 'read', 
-        fromPort: 'mem-val-clean', toPort: 'port-seq-cond-in', 
+        fromPort: 'mem-out-clean', toPort: 'port-seq-cond-in', 
         fromNode: 'node-memory-box', toNode: 'node-loop-sequencer',
         label: 'clean oku ➔', color: '#c084fc', lane: 6 
       },
@@ -801,12 +801,13 @@ void stopMotors() {
                 <div class="p-2.5 rounded-lg border border-slate-700 bg-slate-900/80 transition-all duration-300">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
-                      <div id="mem-val-${v.name}" class="w-4 h-4 rounded-full border-2 border-teal-400 bg-teal-500/20 hover:scale-125 transition cursor-pointer" title="Değer Portu"></div>
+                      <div id="mem-in-${v.name}" class="w-4 h-4 rounded-full border-2 border-teal-400 bg-teal-500/20 hover:scale-125 transition cursor-pointer" title="Değere Yaz (Giriş / Sol)"></div>
                       <span class="text-xs font-mono font-bold text-teal-300">${v.name}</span>
                       <span class="text-[10px] font-mono text-slate-400">(${v.type})</span>
                     </div>
                     <div class="flex items-center gap-2">
                       <span class="text-xs font-mono font-bold text-white bg-slate-800 px-2 py-0.5 rounded border border-slate-700">${v.value}</span>
+                      <div id="mem-out-${v.name}" class="w-4 h-4 rounded-full border-2 border-purple-400 bg-purple-500/20 hover:scale-125 transition cursor-pointer" title="Değeri Oku (Çıkış / Sağ)"></div>
                     </div>
                   </div>
                   <div class="mt-1 text-[10px] font-mono text-teal-400/80">${v.statusText}</div>
@@ -1855,7 +1856,7 @@ void stopMotors() {
           fromNode: 'node-func-' + w.func,
           toNode: 'node-memory-box',
           fromPort: 'port-out-' + w.func + '-ret', // Fonksiyonun dönüş portundan çıkar
-          toPort: 'mem-val-' + w.var, // RAM'deki değişken portuna girer
+          toPort: 'mem-in-' + w.var, // RAM'deki değişken Sol (Giriş) portuna girer
           label: 'Atama: ' + w.var,
           type: 'write-mem'
         });
@@ -1864,13 +1865,14 @@ void stopMotors() {
       // 5. Değişken -> Fonksiyon (Okuma/Parametre) Okları
       let memReadEdgeCount = 0;
       mapData.funcReads.forEach((r) => {
+        // Parametre olarak verildiyse o parametrenin portuna, yoksa fonksiyonun kendisine
         const toPortId = r.argIndex >= 0 ? `port-inp-${r.func}-param-${r.argIndex}` : `port-func-${r.func}-trigger`;
         newEdges.push({
           id: 'edge-mem-read-' + memReadEdgeCount++,
           fromNode: 'node-memory-box',
           toNode: 'node-func-' + r.func,
-          fromPort: 'mem-val-' + r.var, // RAM'den çıkar
-          toPort: toPortId, // Fonksiyona / Parametreye girer
+          fromPort: 'mem-out-' + r.var, // RAM'in Sağ (Çıkış) portundan çıkar
+          toPort: toPortId, // Fonksiyona / Parametreye Sol taraftan girer
           label: 'Okuma: ' + r.var,
           type: 'read-mem'
         });
