@@ -200,8 +200,39 @@
     <!-- Sonsuz Tuval (SVG + Kartlar) -->
     <div id="canvas-container" class="relative flex-1 h-full w-full bg-[var(--background,#0d1117)] canvas-grid cursor-grab active:cursor-grabbing overflow-hidden">
       
-      <!-- Transform Viewport -->
-      <div id="viewport" class="absolute origin-top-left" style="transform: translate(25px, 20px) scale(0.72);">
+      <!-- 1. SOL SABİT VERİYOLU (RAM / DEĞİŞKENLER) - EKRANDA SABİT -->
+      <aside id="node-memory-box" class="absolute left-0 top-0 bottom-0 w-64 border-r border-[#30363d] bg-[#11161d]/95 backdrop-blur-md flex flex-col z-30 shadow-2xl pointer-events-auto select-none">
+        <div class="h-12 px-3.5 border-b border-[#30363d] bg-black/50 flex items-center justify-between text-xs font-bold text-slate-200 shrink-0">
+          <div class="flex items-center gap-2">
+            <span class="text-base">🗄️</span>
+            <div class="flex flex-col">
+              <span class="tracking-wide text-xs">RAM VERİYOLU</span>
+              <span class="text-[9px] font-mono font-normal text-slate-400">Sabit Global Bellek</span>
+            </div>
+          </div>
+          <span id="var-count-badge" class="px-2 py-0.5 rounded text-[10px] bg-teal-500/10 text-teal-300 font-mono border border-teal-500/30">Değişkenler</span>
+        </div>
+        <div id="fixed-var-list" class="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+          <!-- Değişkenler dikey liste: Üst Kırmızı, Alt Yeşil -->
+        </div>
+      </aside>
+
+      <!-- 2. ÜST SABİT DONANIM PİNLERİ (I/O) - EKRANDA SABİT -->
+      <div id="node-pin-registry" class="absolute left-64 top-0 right-0 h-16 border-b border-[#30363d] bg-[#161b22]/95 backdrop-blur-md flex items-center px-4 gap-4 z-20 overflow-x-auto shadow-md pointer-events-auto select-none">
+        <div class="flex items-center gap-2 text-xs font-bold text-slate-300 pr-3 border-r border-slate-700 shrink-0">
+          <span class="text-amber-400 text-sm">⚡</span>
+          <div class="flex flex-col">
+            <span class="text-[11px] uppercase tracking-wider font-mono">Donanım Pinleri</span>
+            <span class="text-[9px] font-normal text-slate-400">Sabit I/O Klemensleri</span>
+          </div>
+        </div>
+        <div id="fixed-pin-list" class="flex items-center gap-3">
+          <!-- Pinler dinamik: Mavi Giriş, Yeşil Çıkış -->
+        </div>
+      </div>
+
+      <!-- Transform Viewport (Tuval / Fonksiyonlar) -->
+      <div id="viewport" class="absolute origin-top-left" style="transform: translate(285px, 85px) scale(0.72);">
         
         <!-- SVG Hat Katmanı -->
         <svg id="svg-wires" class="absolute top-0 left-0 w-[4500px] h-[3500px] overflow-visible z-10" style="pointer-events: none;">
@@ -413,8 +444,8 @@ void stopMotors() {
         category: 'logic',
         tag: 'Matematik Fonksiyonu',
         theme: { header: 'bg-purple-500/20 border-purple-500/40 text-purple-300', dot: 'bg-purple-400' },
-        x: 960,
-        y: 80,
+        x: 480,
+        y: 440,
         width: 310,
         expanded: false,
         inputs: [
@@ -433,8 +464,8 @@ void stopMotors() {
         category: 'actuator',
         tag: 'Eylem / Donanım Sürücü',
         theme: { header: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300', dot: 'bg-emerald-400' },
-        x: 1440,
-        y: 80,
+        x: 860,
+        y: 440,
         width: 310,
         expanded: false,
         inputs: [
@@ -445,30 +476,6 @@ void stopMotors() {
           { id: 'out-m-hw', name: 'Motor Hareketi', type: 'hardware', badge: 'D5 / D6 Sinyali' }
         ],
         code: `void controlMotor(uint8_t speed, uint8_t speedPin) {\n  analogWrite(speedPin, speed);\n  digitalWrite(6, HIGH);\n}`
-      },
-      {
-        id: 'node-memory-box',
-        type: 'memory',
-        title: '📦 Değerler Kutusu (Scope Belleği)',
-        category: 'memory',
-        tag: 'Değişkenler & Linter Durumu',
-        theme: { header: 'bg-teal-500/20 border-teal-500/40 text-teal-200', dot: 'bg-teal-400' },
-        x: 480,
-        y: 510,
-        width: 420,
-        expanded: false
-      },
-      {
-        id: 'node-pin-registry',
-        type: 'hardware-chip',
-        title: '📟 Arduino Pin Kütüğü',
-        category: 'hardware',
-        tag: 'Donanım Portları (Conflict Free)',
-        theme: { header: 'bg-amber-500/20 border-amber-500/40 text-amber-200', dot: 'bg-amber-400' },
-        x: 1020,
-        y: 510,
-        width: 320,
-        expanded: false
       }
     ];
 
@@ -614,7 +621,7 @@ void stopMotors() {
     const state = {
       nodes: JSON.parse(JSON.stringify(initialNodes)),
       edges: JSON.parse(JSON.stringify(initialEdges)),
-      pan: { x: 25, y: 20 },
+      pan: { x: 285, y: 85 },
       zoom: 0.72,
       isPanning: false,
       startPan: { x: 0, y: 0 },
@@ -664,9 +671,85 @@ void stopMotors() {
       zoomText.textContent = `${Math.round(state.zoom * 100)}%`;
     }
 
+    // --- SOL SABİT VERİYOLU (RAM / DEĞİŞKENLER) ÇİZME ---
+    function renderFixedVarDock() {
+      const listEl = document.getElementById('fixed-var-list');
+      const countBadge = document.getElementById('var-count-badge');
+      if (!listEl) return;
+      const vars = state.variables || memoryStore;
+      if (countBadge) countBadge.textContent = `${Object.keys(vars).length} Değişken`;
+
+      listEl.innerHTML = Object.values(vars).map(v => {
+        const isCleanActive = (state.currentStep === 1 || state.currentStep === 2) && v.name === 'clean';
+        const isRawActive = (state.currentStep === 0 || state.currentStep === 1) && v.name === 'raw';
+        const activeGlow = isCleanActive 
+          ? 'border-purple-400 bg-purple-950/50 shadow-[0_0_15px_rgba(192,132,252,0.4)] ring-1 ring-purple-400' 
+          : (isRawActive 
+             ? 'border-teal-400 bg-teal-950/50 shadow-[0_0_15px_rgba(45,212,191,0.4)] ring-1 ring-teal-400' 
+             : 'border-slate-800 bg-slate-900/80');
+
+        return `
+          <div id="var-row-${v.name}" class="flex flex-col items-center gap-1.5 p-2 rounded-lg border ${activeGlow} transition duration-300 w-full relative">
+            <!-- ÜST PORT (KIRMIZI / YAZMA) -->
+            <div class="flex items-center gap-1.5 w-full justify-center">
+              <div id="mem-in-${v.name}" class="w-4 h-4 rounded-full border-2 border-red-500 bg-red-500/20 hover:bg-red-500/80 hover:scale-125 transition cursor-pointer shadow-[0_0_8px_rgba(239,68,68,0.5)]" title="${v.name} Yazma Portu (Kırmızı / Üst)"></div>
+              <span class="text-[9px] font-mono text-red-400 font-semibold tracking-wider">YAZ</span>
+            </div>
+
+            <!-- DEĞİŞKEN BİLGİSİ -->
+            <div class="flex w-full items-center justify-between px-2 py-1 bg-black/50 rounded border border-white/5 my-0.5">
+              <div class="flex flex-col truncate">
+                <span class="text-xs font-mono font-bold text-teal-300 truncate">${v.name}</span>
+                <span class="text-[9px] font-mono text-slate-400">${v.type || 'var'}</span>
+              </div>
+              <span class="text-xs font-mono font-bold text-white bg-slate-800 px-2 py-0.5 rounded border border-slate-700 shrink-0 ml-1">${v.value || '0'}</span>
+            </div>
+            <div class="w-full text-[9px] font-mono text-slate-400 px-1 truncate">${v.statusText || ''}</div>
+
+            <!-- ALT PORT (YEŞİL / OKUMA) -->
+            <div class="flex items-center gap-1.5 w-full justify-center">
+              <div id="mem-out-${v.name}" class="w-4 h-4 rounded-full border-2 border-emerald-400 bg-emerald-500/20 hover:bg-emerald-500/80 hover:scale-125 transition cursor-pointer shadow-[0_0_8px_rgba(52,211,153,0.5)]" title="${v.name} Okuma Portu (Yeşil / Alt)"></div>
+              <span class="text-[9px] font-mono text-emerald-400 font-semibold tracking-wider">OKU</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // --- ÜST SABİT DONANIM PİNLERİ (I/O) ÇİZME ---
+    function renderFixedPinBar() {
+      const listEl = document.getElementById('fixed-pin-list');
+      if (!listEl) return;
+      const pins = state.pins || pinRegistry;
+
+      listEl.innerHTML = pins.map(pr => {
+        const isInput = pr.mode === 'INPUT' || (pr.role && pr.role.toLowerCase().includes('echo'));
+        const colorClass = isInput 
+          ? 'border-blue-500/50 bg-blue-950/40 text-blue-300' 
+          : 'border-emerald-500/50 bg-emerald-950/40 text-emerald-300';
+        const portBorder = isInput 
+          ? 'border-blue-400 bg-blue-500/30' 
+          : 'border-emerald-400 bg-emerald-500/30';
+        const pinId = (pr.pin || 'd0').toLowerCase().replace(/\s+/g, '');
+
+        return `
+          <div class="flex flex-col items-center gap-1 px-3 py-1 rounded-lg border ${colorClass} shadow-sm shrink-0">
+            <div class="flex items-center gap-1.5">
+              <span class="font-mono font-bold text-xs">${pr.pin}</span>
+              <span class="text-[9px] font-mono px-1 rounded bg-black/40 ${isInput ? 'text-blue-300' : 'text-emerald-300'}">${pr.mode}</span>
+            </div>
+            <span class="text-[9px] font-mono text-slate-400">${pr.role || ''}</span>
+            <div id="pin-slot-${pinId}" class="w-3.5 h-3.5 rounded-full border-2 ${portBorder} hover:scale-125 transition cursor-pointer shadow-sm" title="${pr.pin} (${isInput ? 'Mavi Giriş' : 'Yeşil Çıkış'}) Portu"></div>
+          </div>
+        `;
+      }).join('');
+    }
+
     // --- KARTLARI ÇİZME (RENDER NODES) ---
     function renderNodes() {
       nodesLayer.innerHTML = '';
+      renderFixedVarDock();
+      renderFixedPinBar();
 
       state.nodes.forEach(node => {
         const card = document.createElement('div');
@@ -776,77 +859,6 @@ void stopMotors() {
                 </div>
                 <span class="text-[10px] font-mono text-amber-300/80">↺ Başa Dön</span>
               </div>
-            </div>
-          `;
-
-        } else if (node.type === 'memory') {
-          card.className = `node-card absolute select-none rounded-xl border border-slate-700 bg-[var(--card,#161b22)] shadow-2xl w-[260px] transition-all cursor-pointer ${highlightClass}`;
-          card.style.left = `${node.x}px`;
-          card.style.top = `${node.y}px`;
-
-          card.innerHTML = `
-            <div class="px-4 py-2.5 rounded-t-xl border-b border-slate-700 flex items-center justify-between cursor-move bg-slate-800">
-              <div class="flex items-center gap-2">
-                <span class="text-base">🗄️</span>
-                <div>
-                  <div class="text-[10px] font-mono uppercase tracking-wider text-slate-400">Ana Veriyolu</div>
-                  <div class="font-bold text-sm text-white">${node.title}</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="p-3.5 flex flex-col gap-4">
-              ${(node.vars || Object.values(state.variables || memoryStore)).map(v => `
-                <div class="flex flex-col items-center gap-1.5 p-2.5 rounded-lg border border-slate-700 bg-slate-900/80 transition-all duration-300 w-full relative">
-                  <!-- YAZMA PORTU (ÜST / KIRMIZI) -->
-                  <div id="mem-in-${v.name}" class="w-4 h-4 rounded-full border-2 border-red-500 bg-red-500/20 hover:bg-red-500/60 hover:scale-125 transition cursor-pointer shadow-[0_0_8px_rgba(239,68,68,0.4)]" title="Değere Yaz (Üst)"></div>
-                  
-                  <div class="flex w-full items-center justify-between px-1">
-                    <div class="flex flex-col">
-                      <span class="text-xs font-mono font-bold text-slate-200">${v.name}</span>
-                      <span class="text-[9px] font-mono text-slate-500">${v.type}</span>
-                    </div>
-                    <span class="text-xs font-mono font-bold text-white bg-black/50 px-2 py-1 rounded border border-slate-700">${v.value}</span>
-                  </div>
-
-                  <!-- OKUMA PORTU (ALT / YEŞİL) -->
-                  <div id="mem-out-${v.name}" class="w-4 h-4 rounded-full border-2 border-green-500 bg-green-500/20 hover:bg-green-500/60 hover:scale-125 transition cursor-pointer shadow-[0_0_8px_rgba(34,197,94,0.4)]" title="Değeri Oku (Alt)"></div>
-                </div>
-              `).join('')}
-            </div>
-          `;
-
-        } else if (node.type === 'hardware-chip') {
-          card.className = `node-card absolute select-none rounded-xl border border-amber-500/40 bg-[var(--card,#161b22)] shadow-xl w-[320px] transition-all cursor-pointer ${highlightClass}`;
-          card.style.left = `${node.x}px`;
-          card.style.top = `${node.y}px`;
-
-          card.innerHTML = `
-            <div class="px-3.5 py-2 rounded-t-xl border-b border-amber-500/30 flex items-center justify-between cursor-move bg-amber-500/15">
-              <div class="flex items-center gap-2">
-                <span class="text-sm">📟</span>
-                <div>
-                  <div class="text-[10px] font-mono uppercase tracking-wider text-amber-300">${node.tag}</div>
-                  <div class="font-bold text-sm text-white">${node.title}</div>
-                </div>
-              </div>
-              <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono border border-emerald-500/30">0 Çakışma</span>
-            </div>
-
-            <div class="p-3 space-y-2 text-xs">
-              <div class="text-[10px] font-mono text-slate-400 mb-1">FİZİKSEL PİN ÇIKIŞLARI:</div>
-              ${pinRegistry.map(pr => `
-                <div class="p-1.5 rounded bg-slate-900/70 border border-slate-800 flex items-center justify-between text-slate-300">
-                  <div class="flex items-center gap-2">
-                    <span class="font-mono font-bold text-amber-300">${pr.pin}</span>
-                    <span class="text-[10px] text-slate-400">(${pr.mode})</span>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <span class="text-[10px] font-mono text-slate-300">${pr.role}</span>
-                    <div id="pin-slot-${pr.pin.toLowerCase()}" class="w-4 h-4 rounded-full cursor-pointer hover:scale-125 transition border-2 border-white/40 shadow-sm" style="background-color: ${pr.color}" title="${pr.pin} Fiziksel Port Çıkışı"></div>
-                  </div>
-                </div>
-              `).join('')}
             </div>
           `;
 
@@ -997,6 +1009,31 @@ void stopMotors() {
         const h = el ? el.offsetHeight : 260;
         boxes[n.id] = { left: n.x, right: n.x + w, top: n.y, bottom: n.y + h };
       });
+
+      const vpRect = viewport.getBoundingClientRect();
+      const dock = document.getElementById('node-memory-box');
+      if (dock) {
+        const r = dock.getBoundingClientRect();
+        boxes['node-memory-box'] = {
+          left: (r.left - vpRect.left) / state.zoom,
+          right: (r.right - vpRect.left) / state.zoom,
+          top: (r.top - vpRect.top) / state.zoom,
+          bottom: (r.bottom - vpRect.top) / state.zoom
+        };
+      }
+      const pinBar = document.getElementById('node-pin-registry');
+      if (pinBar) {
+        const r = pinBar.getBoundingClientRect();
+        const b = {
+          left: (r.left - vpRect.left) / state.zoom,
+          right: (r.right - vpRect.left) / state.zoom,
+          top: (r.top - vpRect.top) / state.zoom,
+          bottom: (r.bottom - vpRect.top) / state.zoom
+        };
+        boxes['node-pin-registry'] = b;
+        boxes['node-hw-sensor'] = b;
+        boxes['node-hw-motor'] = b;
+      }
       routeCtx = { boxes, used: new Map() };
     }
 
@@ -1139,7 +1176,8 @@ void stopMotors() {
       if (!routeCtx) beginRouting();
       const { boxes, used } = routeCtx;
       const stub = STUB_BASE + cornerRadius; // eğim, kart kenarından en az 30px sonra başlar
-      const bA = boxes[edge.fromNode], bB = boxes[edge.toNode];
+      const bA = boxes[edge.fromNode] || { left: x1 - 10, right: x1 + 10, top: y1 - 10, bottom: y1 + 10 };
+      const bB = boxes[edge.toNode] || { left: x2 - 10, right: x2 + 10, top: y2 - 10, bottom: y2 + 10 };
 
       // Port kartın hangi kenarına yakın? (-1: sol, +1: sağ) -> çıkış yönü daima kartın DIŞINA
       const sideA = Math.abs(x1 - bA.left) < Math.abs(x1 - bA.right) ? -1 : 1;
@@ -1722,11 +1760,9 @@ void stopMotors() {
     document.getElementById('btn-auto-arrange').addEventListener('click', () => {
       const layout = {
         'node-loop-sequencer': { x: 60, y: 80 },
-        'node-sensor': { x: 60, y: 440 },
-        'node-filter': { x: 60, y: 700 },
-        'node-motor': { x: 60, y: 960 },
-        'node-memory-box': { x: 480, y: 80 },
-        'node-pin-registry': { x: 480, y: 440 }
+        'node-sensor': { x: 480, y: 80 },
+        'node-filter': { x: 480, y: 440 },
+        'node-motor': { x: 860, y: 440 }
       };
       state.nodes.forEach(n => {
         if(layout[n.id]) {
@@ -1740,7 +1776,7 @@ void stopMotors() {
 
     btnReset.addEventListener('click', () => {
       state.nodes = JSON.parse(JSON.stringify(initialNodes));
-      state.pan = { x: 25, y: 20 };
+      state.pan = { x: 285, y: 85 };
       state.zoom = 0.72;
       state.selectedNodeId = null;
       state.selectedWireId = null;
@@ -1773,14 +1809,37 @@ void stopMotors() {
       const newNodes = [];
       const newEdges = [];
       
+      // 1. Globals'ı Donanım Pinleri ve RAM Değişkenleri Olarak Ayır
+      const parsedPins = [];
+      const newVariables = {};
+
+      mapData.globals.forEach(g => {
+        const isPin = g.name.toUpperCase().includes('PIN') || ['TRIG', 'ECHO', 'ENA', 'IN1', 'IN2', 'LED', 'BUTTON', 'SDA', 'SCL'].some(k => g.name.toUpperCase().includes(k));
+        if (isPin) {
+          const isInput = g.name.toUpperCase().includes('ECHO') || g.name.toUpperCase().includes('INPUT') || g.name.toUpperCase().includes('BTN') || g.name.toUpperCase().includes('SENSOR');
+          const cleanVal = g.value ? (g.value.match(/\d+/) ? 'D' + g.value.match(/\d+/)[0] : g.value) : g.name;
+          parsedPins.push({
+            pin: cleanVal,
+            mode: isInput ? 'INPUT' : 'OUTPUT',
+            role: g.name,
+            color: isInput ? '#60a5fa' : '#34d399'
+          });
+        } else {
+          newVariables[g.name] = { name: g.name, type: g.type, value: g.value || '?', statusText: 'AST Okundu' };
+        }
+      });
+
+      state.variables = newVariables;
+      state.pins = parsedPins.length > 0 ? parsedPins : pinRegistry;
+
+      // 2. Fonksiyon Kartlarını Tuvale Yerleştir (Bellek ve Pinler Tuvalde Değil, Sabit Panellerdedir!)
       let col = 0;
       let row = 0;
-      const startX = 360; // Fonksiyonlar artık soldan değil ortadan başlıyor
+      const startX = 60;
       const startY = 80;
       const xSpacing = 380;
-      const ySpacing = 300;
+      const ySpacing = 320;
 
-      // 1. Fonksiyon Kartlarını Oluştur
       mapData.functions.forEach(f => {
         const inputs = f.parameters.map((p, i) => ({
           id: `${f.name}-param-${i}`,
@@ -1813,28 +1872,11 @@ void stopMotors() {
           code: f.code
         });
         col++;
-        if(col > 1) { // 2 column layout
+        if(col > 1) {
           col = 0;
           row++;
         }
       });
-
-      // 2. RAM (Global Değişkenler) Kutusunu Oluştur (ARTIK SOLDA)
-      if (mapData.globals.length > 0) {
-        const newVariables = {};
-        mapData.globals.forEach(g => {
-          newVariables[g.name] = { name: g.name, type: g.type, value: g.value || '?', statusText: 'AST Okundu' };
-        });
-        state.variables = newVariables; // renderNodes() için update
-        
-        newNodes.push({
-          id: 'node-memory-box',
-          type: 'memory',
-          title: 'Veri Yolu (Bellek)',
-          x: 40,
-          y: 80
-        });
-      }
 
       // 3. Çağrı Oklarını (Call Graph) Oluştur
       mapData.calls.forEach((c, idx) => {
@@ -1848,40 +1890,53 @@ void stopMotors() {
         });
       });
 
-      // 4. Fonksiyon -> Değişken (Yazma) Okları
+      // 4. Fonksiyon -> Değişken (Yazma) Okları -> Sol Paneldeki Kırmızı Portlara
       let memWriteEdgeCount = 0;
       mapData.funcWrites.forEach((w) => {
         newEdges.push({
           id: 'edge-mem-write-' + memWriteEdgeCount++,
           fromNode: 'node-func-' + w.func,
           toNode: 'node-memory-box',
-          fromPort: 'port-out-' + w.func + '-ret', // Fonksiyonun dönüş portundan çıkar
-          toPort: 'mem-in-' + w.var, // RAM'deki değişken Sol (Giriş) portuna girer
+          fromPort: 'port-out-' + w.func + '-ret',
+          toPort: 'mem-in-' + w.var,
           label: 'Atama: ' + w.var,
           type: 'write-mem'
         });
       });
 
-      // 5. Değişken -> Fonksiyon (Okuma/Parametre) Okları
+      // 5. Değişken / Pin -> Fonksiyon (Okuma/Parametre) Okları
       let memReadEdgeCount = 0;
       mapData.funcReads.forEach((r) => {
-        // Parametre olarak verildiyse o parametrenin portuna, yoksa fonksiyonun kendisine
         const toPortId = r.argIndex >= 0 ? `port-inp-${r.func}-param-${r.argIndex}` : `port-func-${r.func}-trigger`;
-        newEdges.push({
-          id: 'edge-mem-read-' + memReadEdgeCount++,
-          fromNode: 'node-memory-box',
-          toNode: 'node-func-' + r.func,
-          fromPort: 'mem-out-' + r.var, // RAM'in Sağ (Çıkış) portundan çıkar
-          toPort: toPortId, // Fonksiyona / Parametreye Sol taraftan girer
-          label: 'Okuma: ' + r.var,
-          type: 'read-mem'
-        });
+        const pinMatch = (state.pins || []).find(p => p.role === r.var || p.pin === r.var);
+        if (pinMatch) {
+          const pinId = (pinMatch.pin || 'd0').toLowerCase().replace(/\s+/g, '');
+          newEdges.push({
+            id: 'edge-pin-read-' + memReadEdgeCount++,
+            fromNode: 'node-pin-registry',
+            toNode: 'node-func-' + r.func,
+            fromPort: 'pin-slot-' + pinId,
+            toPort: toPortId,
+            label: 'Pin: ' + r.var,
+            type: 'read-pin'
+          });
+        } else {
+          newEdges.push({
+            id: 'edge-mem-read-' + memReadEdgeCount++,
+            fromNode: 'node-memory-box',
+            toNode: 'node-func-' + r.func,
+            fromPort: 'mem-out-' + r.var,
+            toPort: toPortId,
+            label: 'Okuma: ' + r.var,
+            type: 'read-mem'
+          });
+        }
       });
 
       state.nodes = newNodes;
       state.edges = newEdges;
       stopAutoLoop();
-      state.currentStep = -1; // disable animation
+      state.currentStep = -1;
       renderNodes();
       renderWires();
     });
@@ -1889,6 +1944,15 @@ void stopMotors() {
     btnClosePanel.addEventListener('click', () => {
       inspectorPanel.classList.add('hidden');
     });
+
+    const fixedVarList = document.getElementById('fixed-var-list');
+    if (fixedVarList) {
+      fixedVarList.addEventListener('scroll', () => renderWires());
+    }
+    const fixedPinBar = document.getElementById('node-pin-registry');
+    if (fixedPinBar) {
+      fixedPinBar.addEventListener('scroll', () => renderWires());
+    }
 
     // Başlatma
     renderNodes();
