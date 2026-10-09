@@ -780,37 +780,37 @@ void stopMotors() {
           `;
 
         } else if (node.type === 'memory') {
-          card.className = `node-card absolute select-none rounded-xl border border-teal-500/50 bg-[var(--card,#161b22)] shadow-2xl w-[420px] transition-all cursor-pointer ${highlightClass}`;
+          card.className = `node-card absolute select-none rounded-xl border border-slate-700 bg-[var(--card,#161b22)] shadow-2xl w-[260px] transition-all cursor-pointer ${highlightClass}`;
           card.style.left = `${node.x}px`;
           card.style.top = `${node.y}px`;
 
           card.innerHTML = `
-            <div class="px-4 py-2.5 rounded-t-xl border-b border-teal-500/30 flex items-center justify-between cursor-move bg-teal-500/15">
+            <div class="px-4 py-2.5 rounded-t-xl border-b border-slate-700 flex items-center justify-between cursor-move bg-slate-800">
               <div class="flex items-center gap-2">
-                <span class="text-base">📦</span>
+                <span class="text-base">🗄️</span>
                 <div>
-                  <div class="text-[10px] font-mono uppercase tracking-wider text-teal-300">${node.tag}</div>
+                  <div class="text-[10px] font-mono uppercase tracking-wider text-slate-400">Ana Veriyolu</div>
                   <div class="font-bold text-sm text-white">${node.title}</div>
                 </div>
               </div>
-              <span class="text-[10px] px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 font-mono border border-teal-500/40">Scope RAM</span>
             </div>
 
-            <div class="p-3.5 space-y-2.5">
+            <div class="p-3.5 flex flex-col gap-4">
               ${(node.vars || Object.values(state.variables || memoryStore)).map(v => `
-                <div class="p-2.5 rounded-lg border border-slate-700 bg-slate-900/80 transition-all duration-300">
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                      <div id="mem-in-${v.name}" class="w-4 h-4 rounded-full border-2 border-teal-400 bg-teal-500/20 hover:scale-125 transition cursor-pointer" title="Değere Yaz (Giriş / Sol)"></div>
-                      <span class="text-xs font-mono font-bold text-teal-300">${v.name}</span>
-                      <span class="text-[10px] font-mono text-slate-400">(${v.type})</span>
+                <div class="flex flex-col items-center gap-1.5 p-2.5 rounded-lg border border-slate-700 bg-slate-900/80 transition-all duration-300 w-full relative">
+                  <!-- YAZMA PORTU (ÜST / KIRMIZI) -->
+                  <div id="mem-in-${v.name}" class="w-4 h-4 rounded-full border-2 border-red-500 bg-red-500/20 hover:bg-red-500/60 hover:scale-125 transition cursor-pointer shadow-[0_0_8px_rgba(239,68,68,0.4)]" title="Değere Yaz (Üst)"></div>
+                  
+                  <div class="flex w-full items-center justify-between px-1">
+                    <div class="flex flex-col">
+                      <span class="text-xs font-mono font-bold text-slate-200">${v.name}</span>
+                      <span class="text-[9px] font-mono text-slate-500">${v.type}</span>
                     </div>
-                    <div class="flex items-center gap-2">
-                      <span class="text-xs font-mono font-bold text-white bg-slate-800 px-2 py-0.5 rounded border border-slate-700">${v.value}</span>
-                      <div id="mem-out-${v.name}" class="w-4 h-4 rounded-full border-2 border-purple-400 bg-purple-500/20 hover:scale-125 transition cursor-pointer" title="Değeri Oku (Çıkış / Sağ)"></div>
-                    </div>
+                    <span class="text-xs font-mono font-bold text-white bg-black/50 px-2 py-1 rounded border border-slate-700">${v.value}</span>
                   </div>
-                  <div class="mt-1 text-[10px] font-mono text-teal-400/80">${v.statusText}</div>
+
+                  <!-- OKUMA PORTU (ALT / YEŞİL) -->
+                  <div id="mem-out-${v.name}" class="w-4 h-4 rounded-full border-2 border-green-500 bg-green-500/20 hover:bg-green-500/60 hover:scale-125 transition cursor-pointer shadow-[0_0_8px_rgba(34,197,94,0.4)]" title="Değeri Oku (Alt)"></div>
                 </div>
               `).join('')}
             </div>
@@ -1775,7 +1775,7 @@ void stopMotors() {
       
       let col = 0;
       let row = 0;
-      const startX = 60;
+      const startX = 360; // Fonksiyonlar artık soldan değil ortadan başlıyor
       const startY = 80;
       const xSpacing = 380;
       const ySpacing = 300;
@@ -1788,7 +1788,7 @@ void stopMotors() {
           defaultVal: p.type
         }));
         
-        const outputs = f.returnType !== 'void' ? [{
+        const outputs = f.returnType !== 'void' && f.returnType !== '' ? [{
           id: `${f.name}-ret`,
           name: 'return',
           badge: f.returnType
@@ -1819,7 +1819,7 @@ void stopMotors() {
         }
       });
 
-      // 2. RAM (Global Değişkenler) Kutusunu Oluştur
+      // 2. RAM (Global Değişkenler) Kutusunu Oluştur (ARTIK SOLDA)
       if (mapData.globals.length > 0) {
         const newVariables = {};
         mapData.globals.forEach(g => {
@@ -1830,8 +1830,8 @@ void stopMotors() {
         newNodes.push({
           id: 'node-memory-box',
           type: 'memory',
-          title: 'Global Değişkenler (RAM)',
-          x: 850,
+          title: 'Veri Yolu (Bellek)',
+          x: 40,
           y: 80
         });
       }
