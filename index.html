@@ -1782,13 +1782,13 @@ void stopMotors() {
       // 1. Fonksiyon Kartlarını Oluştur
       mapData.functions.forEach(f => {
         const inputs = f.parameters.map((p, i) => ({
-          id: `param-${i}`,
+          id: `${f.name}-param-${i}`,
           name: p.name,
           defaultVal: p.type
         }));
         
         const outputs = f.returnType !== 'void' ? [{
-          id: 'ret',
+          id: `${f.name}-ret`,
           name: 'return',
           badge: f.returnType
         }] : [];
@@ -1847,15 +1847,31 @@ void stopMotors() {
         });
       });
 
-      // 4. Bellek Okuma/Yazma Oklarını Oluştur
-      let memEdgeCount = 0;
-      mapData.memUsage.forEach((u) => {
+      // 4. Fonksiyon -> Değişken (Yazma) Okları
+      let memWriteEdgeCount = 0;
+      mapData.funcWrites.forEach((w) => {
         newEdges.push({
-          id: 'edge-mem-' + memEdgeCount++,
-          fromNode: 'node-func-' + u.func,
+          id: 'edge-mem-write-' + memWriteEdgeCount++,
+          fromNode: 'node-func-' + w.func,
           toNode: 'node-memory-box',
-          toPort: 'mem-val-' + u.var, // memory box port
-          label: 'Erişim: ' + u.var,
+          fromPort: 'port-out-' + w.func + '-ret', // Fonksiyonun dönüş portundan çıkar
+          toPort: 'mem-val-' + w.var, // RAM'deki değişken portuna girer
+          label: 'Atama: ' + w.var,
+          type: 'write-mem'
+        });
+      });
+
+      // 5. Değişken -> Fonksiyon (Okuma/Parametre) Okları
+      let memReadEdgeCount = 0;
+      mapData.funcReads.forEach((r) => {
+        const toPortId = r.argIndex >= 0 ? `port-inp-${r.func}-param-${r.argIndex}` : `port-func-${r.func}-trigger`;
+        newEdges.push({
+          id: 'edge-mem-read-' + memReadEdgeCount++,
+          fromNode: 'node-memory-box',
+          toNode: 'node-func-' + r.func,
+          fromPort: 'mem-val-' + r.var, // RAM'den çıkar
+          toPort: toPortId, // Fonksiyona / Parametreye girer
+          label: 'Okuma: ' + r.var,
           type: 'read-mem'
         });
       });
