@@ -6,7 +6,7 @@
   <title>Nodeino - Zero-Collision PCB Router & Interactive Highlighting v1.0</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <script src="https://unpkg.com/web-tree-sitter@0.20.8/tree-sitter.js"></script>
-  <script src="parser.js"></script>
+  <script src="parser.js?v=4"></script>
   <style>
     .canvas-grid {
       background-size: 24px 24px;
@@ -494,25 +494,25 @@ void stopMotors() {
       },
       { 
         id: 'write-raw', kind: 'write', 
-        fromPort: 'port-sensor-ret', toPort: 'mem-slot-raw', 
+        fromPort: 'port-sensor-ret', toPort: 'mem-val-raw', 
         fromNode: 'node-sensor', toNode: 'node-memory-box',
         label: 'raw: 38cm ➔', color: '#2dd4bf', lane: 3 
       },
       { 
         id: 'write-clean', kind: 'write', 
-        fromPort: 'port-filter-ret', toPort: 'mem-slot-clean', 
+        fromPort: 'port-filter-ret', toPort: 'mem-val-clean', 
         fromNode: 'node-filter', toNode: 'node-memory-box',
         label: 'clean: 35cm ➔', color: '#2dd4bf', lane: 4 
       },
       { 
         id: 'read-raw-to-filter', kind: 'read', 
-        fromPort: 'mem-slot-raw-out', toPort: 'port-filter-in-raw', 
+        fromPort: 'mem-val-raw', toPort: 'port-filter-in-raw', 
         fromNode: 'node-memory-box', toNode: 'node-filter',
         label: 'raw oku ➔', color: '#c084fc', lane: 5 
       },
       { 
         id: 'read-clean-to-branch', kind: 'read', 
-        fromPort: 'mem-slot-clean-out', toPort: 'port-seq-cond-in', 
+        fromPort: 'mem-val-clean', toPort: 'port-seq-cond-in', 
         fromNode: 'node-memory-box', toNode: 'node-loop-sequencer',
         label: 'clean oku ➔', color: '#c084fc', lane: 6 
       },
