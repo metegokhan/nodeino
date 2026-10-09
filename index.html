@@ -797,52 +797,21 @@ void stopMotors() {
             </div>
 
             <div class="p-3.5 space-y-2.5">
-              ${(() => {
-                const isRawActive = (state.currentStep === 0 || state.currentStep === 1);
-                const isCleanActive = (state.currentStep === 1 || state.currentStep === 2);
-                return `
-                  <div class="p-2.5 rounded-lg border transition-all duration-300 ${isRawActive ? 'border-teal-400 bg-teal-500/20 shadow-[0_0_18px_rgba(45,212,191,0.3)] ring-1 ring-teal-400' : 'border-slate-700 bg-slate-900/80'}">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-2">
-                        <div id="mem-slot-raw" class="w-4 h-4 rounded-full border-2 border-teal-400 bg-teal-500/20 hover:scale-125 transition cursor-pointer" title="readDistance() Sonucu Yazma Portu (GİRİŞ)"></div>
-                        <span class="text-xs font-mono font-bold text-teal-300">raw</span>
-                        <span class="text-[10px] font-mono text-slate-400">(uint16_t)</span>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <span class="text-xs font-mono font-bold text-white bg-slate-800 px-2 py-0.5 rounded border border-slate-700">${memoryStore.raw.value}</span>
-                        <div id="mem-slot-raw-out" class="w-4 h-4 rounded-full border-2 border-purple-400 bg-purple-500/20 hover:scale-125 transition cursor-pointer" title="smoothFilter() İçin Değer Okuma Portu (ÇIKIŞ)"></div>
-                      </div>
+              ${(node.vars || Object.values(state.variables || memoryStore)).map(v => `
+                <div class="p-2.5 rounded-lg border border-slate-700 bg-slate-900/80 transition-all duration-300">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <div id="mem-val-${v.name}" class="w-4 h-4 rounded-full border-2 border-teal-400 bg-teal-500/20 hover:scale-125 transition cursor-pointer" title="Değer Portu"></div>
+                      <span class="text-xs font-mono font-bold text-teal-300">${v.name}</span>
+                      <span class="text-[10px] font-mono text-slate-400">(${v.type})</span>
                     </div>
-                    <div class="mt-1 text-[10px] font-mono text-teal-400/80">${memoryStore.raw.statusText}</div>
-                  </div>
-
-                  <div class="p-2.5 rounded-lg border transition-all duration-300 ${isCleanActive ? 'border-purple-400 bg-purple-500/20 shadow-[0_0_18px_rgba(192,132,252,0.3)] ring-1 ring-purple-400' : 'border-slate-700 bg-slate-900/80'}">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-2">
-                        <div id="mem-slot-clean" class="w-4 h-4 rounded-full border-2 border-teal-400 bg-teal-500/20 hover:scale-125 transition cursor-pointer" title="smoothFilter() Sonucu Yazma Portu (GİRİŞ)"></div>
-                        <span class="text-xs font-mono font-bold text-purple-300">clean</span>
-                        <span class="text-[10px] font-mono text-slate-400">(uint16_t)</span>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <span class="text-xs font-mono font-bold text-white bg-slate-800 px-2 py-0.5 rounded border border-slate-700">${memoryStore.clean.value}</span>
-                        <div id="mem-slot-clean-out" class="w-4 h-4 rounded-full border-2 border-purple-400 bg-purple-500/20 hover:scale-125 transition cursor-pointer" title="Şart Kontrolü İçin Değer Okuma Portu (ÇIKIŞ)"></div>
-                      </div>
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-mono font-bold text-white bg-slate-800 px-2 py-0.5 rounded border border-slate-700">${v.value}</span>
                     </div>
-                    <div class="mt-1 text-[10px] font-mono text-purple-300/80">${memoryStore.clean.statusText}</div>
                   </div>
-                `;
-              })()}
-
-              <div class="p-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10">
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs font-mono font-bold text-amber-300">temp_c</span>
-                    <span class="text-[10px] font-mono text-slate-400">(float)</span>
-                  </div>
-                  <span class="text-xs font-mono font-bold text-amber-200 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-500/30">${memoryStore.temp_c.value}</span>
+                  <div class="mt-1 text-[10px] font-mono text-teal-400/80">${v.statusText}</div>
                 </div>
-                <div class="mt-1 text-[10px] font-mono text-amber-300">${memoryStore.temp_c.statusText}</div>
-              </div>
+              `).join('')}
             </div>
           `;
 
@@ -1808,13 +1777,29 @@ void stopMotors() {
       const startX = 60;
       const startY = 80;
       const xSpacing = 380;
-      const ySpacing = 280;
+      const ySpacing = 300;
 
+      // 1. Fonksiyon Kartlarını Oluştur
       mapData.functions.forEach(f => {
+        const inputs = f.parameters.map((p, i) => ({
+          id: `param-${i}`,
+          name: p.name,
+          defaultVal: p.type
+        }));
+        
+        const outputs = f.returnType !== 'void' ? [{
+          id: 'ret',
+          name: 'return',
+          badge: f.returnType
+        }] : [];
+
         newNodes.push({
           id: f.id,
           type: 'function',
           title: f.name + '()',
+          returnType: f.returnType,
+          inputs: inputs,
+          outputs: outputs,
           category: f.name === 'setup' || f.name === 'loop' ? 'core' : 'function',
           tag: 'C++ Fonksiyonu',
           theme: f.name === 'setup' || f.name === 'loop' 
@@ -1827,19 +1812,51 @@ void stopMotors() {
           code: f.code
         });
         col++;
-        if(col > 2) {
+        if(col > 1) { // 2 column layout
           col = 0;
           row++;
         }
       });
 
+      // 2. RAM (Global Değişkenler) Kutusunu Oluştur
+      if (mapData.globals.length > 0) {
+        const newVariables = {};
+        mapData.globals.forEach(g => {
+          newVariables[g.name] = { name: g.name, type: g.type, value: g.value || '?', statusText: 'AST Okundu' };
+        });
+        state.variables = newVariables; // renderNodes() için update
+        
+        newNodes.push({
+          id: 'node-memory-box',
+          type: 'memory',
+          title: 'Global Değişkenler (RAM)',
+          x: 850,
+          y: 80
+        });
+      }
+
+      // 3. Çağrı Oklarını (Call Graph) Oluştur
       mapData.calls.forEach((c, idx) => {
         newEdges.push({
           id: 'edge-call-' + idx,
           fromNode: 'node-func-' + c.from,
           toNode: 'node-func-' + c.to,
+          toPort: 'port-func-' + c.to + '-trigger',
           label: 'Çağırır (' + c.line + ')',
           type: 'signal'
+        });
+      });
+
+      // 4. Bellek Okuma/Yazma Oklarını Oluştur
+      let memEdgeCount = 0;
+      mapData.memUsage.forEach((u) => {
+        newEdges.push({
+          id: 'edge-mem-' + memEdgeCount++,
+          fromNode: 'node-func-' + u.func,
+          toNode: 'node-memory-box',
+          toPort: 'mem-val-' + u.var, // memory box port
+          label: 'Erişim: ' + u.var,
+          type: 'read-mem'
         });
       });
 
