@@ -1,17 +1,25 @@
 let parser;
 let CppLanguage;
 
-// Initialize Tree-sitter and load the WASM
+// Initialize Tree-sitter and load the WASM from CDN to prevent file:// CORS errors
 async function initParser() {
   console.log("Tree-Sitter yükleniyor...");
-  await TreeSitter.init();
-  parser = new TreeSitter();
-  
-  // Yüklediğimiz wasm dosyasından C++ dil gramerini al
-  CppLanguage = await TreeSitter.Language.load('tree-sitter-cpp.wasm');
-  parser.setLanguage(CppLanguage);
-  
-  console.log("Tree-Sitter C++ ayrıştırıcı hazır!");
+  try {
+    await TreeSitter.init({
+      locateFile() {
+        return 'https://unpkg.com/web-tree-sitter@0.20.8/tree-sitter.wasm';
+      }
+    });
+    parser = new TreeSitter();
+    
+    // Yüklediğimiz wasm dosyasından C++ dil gramerini al (CDN üzerinden)
+    CppLanguage = await TreeSitter.Language.load('https://unpkg.com/tree-sitter-wasms@0.1.11/out/tree-sitter-cpp.wasm');
+    parser.setLanguage(CppLanguage);
+    
+    console.log("Tree-Sitter C++ ayrıştırıcı hazır!");
+  } catch(e) {
+    console.error("Tree-Sitter yüklenirken hata oluştu:", e);
+  }
 }
 
 // Ham kodu AST'ye (Abstract Syntax Tree) çevirip fonksiyonları ve çağrılarını (Call Graph) çıkarır
